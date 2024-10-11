@@ -11,3 +11,8 @@ The report should have the following fields,
 4. Net Error
 5. Absolute Error
 6. Forecast Accuracy %
+
+## 2nd Requirement : 
+### Description
+The supply chain business manager wants to see which customers' forecast accuracy has dropped from 2020 to 2021.
+-> Provide a complete report with these columns: customer_code, customer_name, market, forecast_accuracy_2020, forecast_accuracy_2021
