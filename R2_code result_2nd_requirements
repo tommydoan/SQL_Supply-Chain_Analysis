@@ -71,5 +71,5 @@ JOIN forecast_accuracy_2020
 USING(customer_code, customer, market, product_code)
 )
 SELECT *,
-		accuracy_forecast_pct_2021 - accuracy_forecast_pct_2020 AS droped
+	accuracy_forecast_pct_2021 - accuracy_forecast_pct_2020 AS droped
 FROM CTE 
