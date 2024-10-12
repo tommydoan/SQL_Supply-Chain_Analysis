@@ -1,0 +1,75 @@
+# Resolve the forecast accuracy has dropped from 2020 to 2021.
+Report include : customer_code, customer_name, market, forecast_accuracy_2020, forecast_accuracy_2021
+----
+# Step 1 : Create the temporary table of forecast accuracy 2021
+
+CREATE TEMPORARY TABLE forecast_accuracy_2021_
+WITH CTE AS 
+(SELECT 
+    fiscal_year,
+    product_code,
+    f.customer_code,
+    c.customer,
+    c.market,
+    sold_quantity,
+    forecast_quantity,
+    SUM(forecast_quantity - sold_quantity) AS error,
+    SUM(forecast_quantity - sold_quantity) * 100 / SUM(forecast_quantity) AS error_pct,
+    ABS(SUM(forecast_quantity - sold_quantity)) AS ABS_error,
+    ABS(SUM(forecast_quantity - sold_quantity)) * 100 / SUM(forecast_quantity) AS ABS_error_pct
+FROM
+    gdb0041.fact_forecast_sale_monthly f
+        JOIN
+    dim_customer c USING (customer_code)
+WHERE fiscal_year = 2021 AND forecast_quantity != 0
+GROUP BY fiscal_year , product_code , customer_code , sold_quantity , forecast_quantity 
+)
+SELECT *,
+	IF(ABS_error_pct > 100,0, 100-ABS_error_pct) AS accuracy_forecast_pct_2021
+FROM CTE 
+ORDER BY forecast_quantity DESC
+
+# Step 2 : Create the temporary table of forecast accuracy 2020
+
+CREATE TEMPORARY TABLE  forecast_accuracy_2020
+WITH CTE AS 
+(SELECT 
+    fiscal_year,
+    product_code,
+    f.customer_code,
+    c.customer,
+    c.market,
+    sold_quantity,
+    forecast_quantity,
+    SUM(forecast_quantity - sold_quantity) AS error,
+    SUM(forecast_quantity - sold_quantity) * 100 / SUM(forecast_quantity) AS error_pct,
+    ABS(SUM(forecast_quantity - sold_quantity)) AS ABS_error,
+    ABS(SUM(forecast_quantity - sold_quantity)) * 100 / SUM(forecast_quantity) AS ABS_error_pct
+FROM
+    gdb0041.fact_forecast_sale_monthly f
+        JOIN
+    dim_customer c USING (customer_code)
+WHERE fiscal_year = 2020 AND forecast_quantity != 0
+GROUP BY fiscal_year , product_code , customer_code , sold_quantity , forecast_quantity 
+)
+SELECT *,
+	IF(ABS_error_pct > 100,0, 100-ABS_error_pct) AS accuracy_forecast_pct_2020
+FROM CTE 
+ORDER BY forecast_quantity DESC
+
+Step 3 : Get JOIN 2 temporary table to get 2 column of forecast, then create new
+column call droped to get the new value from forecast of 2 year.
+
+WITH CTE AS
+(SELECT customer_code,
+	   customer,
+	   market,
+       accuracy_forecast_pct_2020,
+       accuracy_forecast_pct_2021
+FROM forecast_accuracy_2021_
+JOIN forecast_accuracy_2020
+USING(customer_code, customer, market, product_code)
+)
+SELECT *,
+		accuracy_forecast_pct_2021 - accuracy_forecast_pct_2020 AS droped
+FROM CTE 
