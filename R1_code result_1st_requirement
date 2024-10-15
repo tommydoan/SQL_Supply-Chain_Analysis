@@ -8,8 +8,8 @@ WITH CTE AS
     f.customer_code,
     c.customer,
     c.market,
-    sold_quantity,
-    forecast_quantity,
+    SUM(sold_quantity) AS total_sold_quantity,
+    SUM(forecast_quantity) AS total_forecast_quantity,
     SUM(forecast_quantity - sold_quantity) AS error,
     SUM(forecast_quantity - sold_quantity) * 100 / SUM(forecast_quantity) AS error_pct,
     ABS(SUM(forecast_quantity - sold_quantity)) AS ABS_error,
@@ -18,29 +18,29 @@ FROM
     gdb0041.fact_forecast_sale_monthly f
         JOIN
     dim_customer c USING (customer_code)
-GROUP BY fiscal_year , product_code , customer_code , sold_quantity , forecast_quantity 
+GROUP BY fiscal_year , product_code , customer_code 
 )
 SELECT *,
 	IF(ABS_error_pct > 100,0, 100-ABS_error_pct) AS accuracy_forecast_pct
 FROM CTE 
 WHERE fiscal_year = 2021
-ORDER BY sold_quantity DESC
+ORDER BY total_sold_quantity DESC
 
 # Then, Create stored proceduces to adjust the fiscal year easily : 
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `get_forecast_accuracy_FY`(
-	In_fiscal_year INT
+	In_fiscal_year INT		
 )
 BEGIN
-WITH CTE AS 
+WITH CTE AS 			
 (SELECT 
     fiscal_year,
     product_code,
     f.customer_code,
     c.customer,
     c.market,
-    sold_quantity,
-    forecast_quantity,
+    SUM(sold_quantity) AS total_sold_quantity,
+    SUM(forecast_quantity) AS total_forecast_quantity,
     SUM(forecast_quantity - sold_quantity) AS error,
     SUM(forecast_quantity - sold_quantity) * 100 / SUM(forecast_quantity) AS error_pct,
     ABS(SUM(forecast_quantity - sold_quantity)) AS ABS_error,
@@ -55,7 +55,7 @@ SELECT *,
 	IF(ABS_error_pct > 100,0, 100-ABS_error_pct) AS accuracy_forecast_pct
 FROM CTE 
 WHERE fiscal_year = In_fiscal_year
-ORDER BY sold_quantity DESC;
+ORDER BY total_sold_quantity DESC;
 END
 -----
 
